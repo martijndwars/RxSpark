@@ -4,6 +4,11 @@ import org.apache.spark.streaming.StreamingContext._
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 import wrapper.Helper._
 
+import org.apache.spark.streaming.{Seconds, StreamingContext}
+import org.apache.spark.{SparkContext, SparkConf}
+import rx.lang.scala.Observable
+import scala.concurrent.duration._
+
 object Main {
   def main(args: Array[String]): Unit = {
     // Create the context with a 1 second batch size. The "local[3]" means 3 threads.
