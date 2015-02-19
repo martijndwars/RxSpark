@@ -20,7 +20,9 @@ class RxInputDStream(ssc_ : StreamingContext, observable: Observable[Long], stor
 class RxReceiver[T](observable: Observable[T], storageLevel: StorageLevel) extends Receiver[T](storageLevel) with Logging {
   override def onStart(): Unit = {
     logInfo("Rx receiver started")
-    observable.subscribe(store(_))
+//    observable.subscribe(store(_))
+    (Main.clock.asInstanceOf[Observable[T]])
+      .subscribe(x => store(x))
   }
 
   override def onStop(): Unit = {

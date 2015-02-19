@@ -1,15 +1,19 @@
+<<<<<<< HEAD
 import org.apache.spark.SparkConf
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.streaming.StreamingContext._
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 import wrapper.Helper._
 
+import org.apache.log4j.Logger
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 import org.apache.spark.{SparkContext, SparkConf}
 import rx.lang.scala.Observable
 import scala.concurrent.duration._
 
 object Main {
+  val clock = Observable.interval(100 milliseconds)
+
   def main(args: Array[String]): Unit = {
     // Create the context with a 1 second batch size. The "local[3]" means 3 threads.
     val sparkConf = new SparkConf().setMaster("local[3]").setAppName("NetworkWordCount")
@@ -25,6 +29,16 @@ object Main {
       .toObservable
       .subscribe(l => println("Observable says: " + l))
 
+    wordCounts.foreachRDD(rdd => {
+      val top = rdd.take(10)
+
+      top.foreach(x => {
+        println("Item: " + x)
+      })
+
+      println("Count: " + rdd.count())
+    })
+    
     ssc.start()
     ssc.awaitTermination()
   }
