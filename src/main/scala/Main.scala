@@ -1,14 +1,10 @@
-<<<<<<< HEAD
 import org.apache.spark.SparkConf
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.streaming.StreamingContext._
 import org.apache.spark.streaming.{Seconds, StreamingContext}
+import rx.lang.scala.Observable
 import wrapper.Helper._
 
-import org.apache.log4j.Logger
-import org.apache.spark.streaming.{Seconds, StreamingContext}
-import org.apache.spark.{SparkContext, SparkConf}
-import rx.lang.scala.Observable
 import scala.concurrent.duration._
 
 object Main {
@@ -38,7 +34,7 @@ object Main {
 
       println("Count: " + rdd.count())
     })
-    
+
     ssc.start()
     ssc.awaitTermination()
   }
