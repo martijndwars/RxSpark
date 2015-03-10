@@ -2,6 +2,7 @@ import org.apache.spark.SparkConf
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.streaming.StreamingContext._
 import org.apache.spark.streaming.{Seconds, StreamingContext}
+import Helper._
 
 object Main {
   def main(args: Array[String]): Unit = {
@@ -15,8 +16,8 @@ object Main {
     val wordCounts = words.map(x => (x, 1)).reduceByKey(_ + _)
 
     // This seems to work! Apparently, collect() sends the RDD back or someth.?
-    DStreamWrapper
-      .toObservable(wordCounts)
+    wordCounts
+      .toObservable
       .subscribe(l => println("Observable says: " + l))
 
     ssc.start()
