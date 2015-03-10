@@ -2,8 +2,7 @@ import org.apache.spark.SparkConf
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.streaming.StreamingContext._
 import org.apache.spark.streaming.{Seconds, StreamingContext}
-import wrapper.Helper
-import Helper._
+import wrapper.Helper._
 
 object Main {
   def main(args: Array[String]): Unit = {
