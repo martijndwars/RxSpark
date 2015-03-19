@@ -1,6 +1,6 @@
 package wrapper
 
-import java.io.PrintStream
+import java.io._
 import java.net.ServerSocket
 
 import org.apache.spark.storage.StorageLevel
@@ -16,23 +16,33 @@ object Helper {
     )
   }
 
-  implicit class ObservableWrapper(obs: Observable[Long]) {
+  implicit class ObservableWrapper[T](obs: Observable[T]) {
     def toDStream(ssc: StreamingContext) = {
       new Thread() {
-        override def run: Unit = {
-
+        override def run(): Unit = {
           val server = new ServerSocket(9999)
           val s = server.accept()
           println("Client connected")
-          val out = new PrintStream(s.getOutputStream)
 
-          obs.subscribe(x => out.println(x))
+          val oos = new ObjectOutputStream(s.getOutputStream)
+          obs.subscribe(x => oos.writeObject(x))
+
           while (true) {}
         }
-      }.start
+      }.start()
+      
+      ssc.socketStream("localhost", 9999, (inputStream: InputStream) => {
+        val objectInputStream = new ObjectInputStream(inputStream)
 
+        new Iterator[AnyRef] {
+          override def hasNext: Boolean = {
+            true
+          }
 
-      ssc.socketTextStream("localhost", 9999, StorageLevel.MEMORY_AND_DISK_SER)
+          override def next(): AnyRef =
+            objectInputStream.readObject()
+        }
+      }, StorageLevel.MEMORY_AND_DISK_SER)
     }
   }
 
