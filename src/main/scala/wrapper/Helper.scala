@@ -6,7 +6,10 @@ import java.net.ServerSocket
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.dstream.DStream
+import org.apache.spark.util.NextIterator
 import rx.lang.scala.Observable
+
+import scala.reflect.ClassTag
 
 object Helper {
 
@@ -16,7 +19,7 @@ object Helper {
     )
   }
 
-  implicit class ObservableWrapper[T](obs: Observable[T]) {
+  implicit class ObservableWrapper[T: ClassTag](obs: Observable[T]) {
     def toDStream(ssc: StreamingContext) = {
       new Thread() {
         override def run(): Unit = {
@@ -30,17 +33,16 @@ object Helper {
           while (true) {}
         }
       }.start()
-      
+
       ssc.socketStream("localhost", 9999, (inputStream: InputStream) => {
         val objectInputStream = new ObjectInputStream(inputStream)
 
-        new Iterator[AnyRef] {
-          override def hasNext: Boolean = {
-            true
-          }
+        new Iterator[T] {
+          override def hasNext: Boolean =
+            true // TODO: We should use a caching mechanism, as Spark does with its NextIterator (but its private..)
 
-          override def next(): AnyRef =
-            objectInputStream.readObject()
+          override def next(): T =
+            objectInputStream.readObject.asInstanceOf[T]
         }
       }, StorageLevel.MEMORY_AND_DISK_SER)
     }

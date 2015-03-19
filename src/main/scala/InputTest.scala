@@ -13,12 +13,27 @@ object InputTest {
     val ssc = new StreamingContext(sparkConf, Seconds(1))
 
     val obs = Observable.interval(1 seconds)
+    val yoloObs = obs.map(x => new Yolo(x.toString))
 
-    val stream = obs.toDStream(ssc)
-    stream.foreachRDD(x => x.foreach(println))
+    // Turn our observable into a DStream
+    val stream = yoloObs.toDStream(ssc)
+
+    // Let our workers do heavy computations on our Yolo objects
+    val stream2 = stream.map(y => y.heavyComputation())
+
+    // Get back the results and print those
+    stream2.foreachRDD(x => x.foreach(println))
 
     ssc.start()
     ssc.awaitTermination()
   }
 
+}
+
+class Yolo(val number: String) extends Serializable {
+  def heavyComputation() = {
+    Thread.sleep(3)
+    
+    new Integer(number) * 2
+  }
 }
