@@ -6,8 +6,6 @@ import wrapper.Helper._
 import scala.concurrent.duration._
 
 object Main {
-  val clock = Observable.interval(100 milliseconds)
-
   def main(args: Array[String]): Unit = {
     // Create the context with a 1 second batch size. The "local[3]" means 3 threads.
     val sparkConf = new SparkConf()
@@ -24,7 +22,7 @@ object Main {
     stream
       .toObservable
       .subscribe(l => println("Observable says: " + l))
-
+    
     ssc.start()
     ssc.awaitTermination()
   }
