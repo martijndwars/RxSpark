@@ -1,46 +1,40 @@
-import org.apache.spark.Logging
+import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
-import org.apache.spark.streaming.StreamingContext
-import org.apache.spark.streaming.dstream.ReceiverInputDStream
-import org.apache.spark.streaming.receiver.Receiver
-import rx.lang.scala.{Subscription, Observable}
+import org.apache.spark.streaming.dstream.InputDStream
+import org.apache.spark.streaming.{StreamingContext, Time}
+import rx.lang.scala.{Observable, Subscription}
 
+import scala.collection.mutable
 import scala.reflect.ClassTag
 
 object RxUtils {
-  def createStream[T: ClassTag](scc_ : StreamingContext, observable: Observable[T]): ReceiverInputDStream[T] = {
-    new RxInputDStream[T](scc_, observable, StorageLevel.MEMORY_AND_DISK_SER_2)
+  def createStream[T: ClassTag](ssc_ : StreamingContext, observable: Observable[T]): InputDStream[T] = {
+    new RxInputDStream[T](ssc_, observable)
   }
 }
 
-class RxInputDStream[T: ClassTag](ssc_ : StreamingContext, observable: Observable[T], storageLevel: StorageLevel) extends ReceiverInputDStream[T](ssc_)  {
-  override def getReceiver(): Receiver[T] = {
-    new RxReceiver(observable, storageLevel)
-  }
-}
-
-class RxReceiver[T](observable: Observable[T], storageLevel: StorageLevel) extends Receiver[T](storageLevel) with Logging {
+// TODO: This class might be able to extend QueueInputDStream (less duplication). Think about BackPressure and such..
+class RxInputDStream[T: ClassTag](ssc_ : StreamingContext, observable: Observable[T]) extends InputDStream[T](ssc_) {
   var subscription: Option[Subscription] = None
+  var storage: mutable.Queue[T] = new mutable.Queue[T]
 
-  /**
-   * Subscribe to the observable when Spark signals to start.
-   */
-  override def onStart(): Unit = {
+  override def start() {
     subscription = Some(
-      Main.clock
-        .asInstanceOf[Observable[T]]
-        .subscribe(x => store(x))
+      observable
+        .subscribe(storage += _)
     )
-
-    logInfo("Rx receiver started")
   }
 
-  /**
-   * Unsubscribe from the observable when Spark signals to stop.
-   */
-  override def onStop(): Unit = {
+  override def stop() {
     subscription.map(_.unsubscribe())
+  }
 
-    logInfo("Rx receiver stopped")
+  override def compute(validTime: Time): Option[RDD[T]] = {
+    // TODO: Currently, one at a time.
+    if (storage.size > 0) {
+      Some(ssc_.sparkContext.makeRDD(Seq(storage.dequeue()), 1))
+    } else {
+      None
+    }
   }
 }
