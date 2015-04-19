@@ -11,6 +11,7 @@ import scala.concurrent.duration._
 /**
  * Created by Niels on 17-3-2015.
  */
+/*
 object InputTest {
 
   def main(args: Array[String]): Unit = {
@@ -28,3 +29,5 @@ object InputTest {
   }
 
 }
+
+*/

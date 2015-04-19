@@ -1,5 +1,6 @@
 package examples
 
+/*
 import org.apache.spark.SparkConf
 import org.apache.spark.streaming.twitter.TwitterUtils
 import org.apache.spark.streaming.{Seconds, StreamingContext}
@@ -59,3 +60,4 @@ object TwitterPopularTags {
     ssc.awaitTermination()
   }
 }
+*/
