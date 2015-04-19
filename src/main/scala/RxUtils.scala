@@ -74,6 +74,7 @@ class BackpressuredRxInputDStream[T: ClassTag](ssc_ : StreamingContext, observab
 
   var waiting: Int = 0
   var itemCount: Int = 1
+  var halved: Boolean = false
 
   override def start(): Unit = {
     subscriber = Some(new MySubscriber[T] {
@@ -114,16 +115,20 @@ class BackpressuredRxInputDStream[T: ClassTag](ssc_ : StreamingContext, observab
       println("1: Not waiting")
       if (ssc_.getScheduler().getJobSets().isEmpty) {
         println("2: No jobs queued")
-        itemCount *= 2
+        if (halved) {
+          halved = false
+        } else {
+          itemCount *= 2
+        }
         waiting = itemCount
         println("3: Ask for " + itemCount + " items")
         subscriber.get.more(itemCount)
       } else {
         println("4: There are jobs queued")
-        itemCount /= 2
-        waiting = itemCount
-        println("5: Ask for " + itemCount + " items")
-        subscriber.get.more(itemCount)
+        if (!halved) {
+          itemCount /= 2
+          halved = true
+        }
       }
     }
 
@@ -137,5 +142,3 @@ class MySubscriber[T] extends Subscriber[T] {
     request(count)
   }
 }
-
-// TODO: Perhaps we can remove the queue from this code, and use an observable that already does this buffering for us?
