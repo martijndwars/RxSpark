@@ -2,6 +2,7 @@ import org.apache.spark.SparkConf
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 import rx.lang.scala.Observable
 import wrapper.Helper._
+import scala.concurrent.duration._
 
 object Main {
   def main(args: Array[String]): Unit = {
@@ -13,8 +14,8 @@ object Main {
     val ssc = new StreamingContext(sparkConf, Seconds(1))
 
     // Use local observable as input stream for Spark
-    //val nonBackpressureableClock = Observable.interval(100 milliseconds)
-    //val stream = RxUtils.createStream(ssc, nonBackpressureableClock)
+//    val nonBackpressureableClock = Observable.interval(100 milliseconds)
+//    val stream = RxUtils.createStream(ssc, nonBackpressureableClock)
 
     val backpressureableClock = Observable.from(0 to 1000)
     val stream = RxUtils.createBackpressuredStream(ssc, backpressureableClock)
@@ -22,7 +23,7 @@ object Main {
     // Simulate a slow stream so jobs will start piling up
     val slowStream = stream
       .map(x => {
-        Thread.sleep(100)
+        Thread.sleep(1000)
         x
       })
 
