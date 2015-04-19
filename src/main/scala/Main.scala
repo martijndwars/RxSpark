@@ -16,18 +16,21 @@ object Main {
     //val nonBackpressureableClock = Observable.interval(100 milliseconds)
     //val stream = RxUtils.createStream(ssc, nonBackpressureableClock)
 
-    val backpressureableClock = Observable.from(0 to 100)
+    val backpressureableClock = Observable.from(0 to 1000)
     val stream = RxUtils.createBackpressuredStream(ssc, backpressureableClock)
 
     // Simulate a slow stream so jobs will start piling up
     val slowStream = stream
-      .map(_ + 1)
-    //.map(_ => Thread.sleep(3000))
+      .map(x => {
+        Thread.sleep(100)
+        x
+      })
 
     // Use output stream from Spark as observable
     slowStream
       .toObservable
-      .subscribe(l => println("Observable says: " + l))
+      .subscribe(l => l + 1)
+      //.subscribe(l => println("Observable says: " + l))
 
     ssc.start()
     ssc.awaitTermination()

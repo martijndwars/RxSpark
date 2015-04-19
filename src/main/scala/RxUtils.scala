@@ -72,14 +72,19 @@ class BackpressuredRxInputDStream[T: ClassTag](ssc_ : StreamingContext, observab
   var subscriber: Option[MySubscriber[T]] = None
   var storage: mutable.Queue[T] = new mutable.Queue[T]
 
+  var waiting: Int = 0
+  var itemCount: Int = 1
+
   override def start(): Unit = {
     subscriber = Some(new MySubscriber[T] {
       override def onStart(): Unit = {
-        request(1)
+        waiting = 1
+        request(itemCount)
       }
 
       override def onNext(value: T): Unit = {
         println("Thanks for the value: " + value)
+        waiting -= 1
         storage += value
       }
     })
@@ -105,12 +110,21 @@ class BackpressuredRxInputDStream[T: ClassTag](ssc_ : StreamingContext, observab
       None
     }
 
-    // When there are no jobs queued, allow the observable to emit more items
-    if (ssc_.getScheduler().getJobSets().isEmpty) {
-      println("Job queue is empty, give me more")
-      subscriber.get.more()
-    } else {
-      println("Job queue contains " + ssc_.getScheduler().getJobSets().size() + " jobs, please wait..")
+    if (waiting == 0) {
+      println("1: Not waiting")
+      if (ssc_.getScheduler().getJobSets().isEmpty) {
+        println("2: No jobs queued")
+        itemCount *= 2
+        waiting = itemCount
+        println("3: Ask for " + itemCount + " items")
+        subscriber.get.more(itemCount)
+      } else {
+        println("4: There are jobs queued")
+        itemCount /= 2
+        waiting = itemCount
+        println("5: Ask for " + itemCount + " items")
+        subscriber.get.more(itemCount)
+      }
     }
 
     rdd
@@ -119,8 +133,8 @@ class BackpressuredRxInputDStream[T: ClassTag](ssc_ : StreamingContext, observab
 
 // Hack to allow calling `more()` outside of the anonymous class
 class MySubscriber[T] extends Subscriber[T] {
-  def more(): Unit = {
-    request(1)
+  def more(count: Int): Unit = {
+    request(count)
   }
 }
 
