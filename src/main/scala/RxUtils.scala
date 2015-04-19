@@ -69,26 +69,10 @@ class RxInputDStream[T: ClassTag](ssc_ : StreamingContext, observable: Observabl
  */
 class BackpressuredRxInputDStream[T: ClassTag](ssc_ : StreamingContext, observable: Observable[T]) extends InputDStream[T](ssc_) {
   var subscription: Option[Subscription] = None
-  var subscriber: Option[MySubscriber[T]] = None
-  var storage: mutable.Queue[T] = new mutable.Queue[T]
-
-  var waiting: Int = 0
-  var itemCount: Int = 1
-  var halved: Boolean = false
+  var subscriber: Option[BatchSubscriber[T]] = None
 
   override def start(): Unit = {
-    subscriber = Some(new MySubscriber[T] {
-      override def onStart(): Unit = {
-        waiting = 1
-        request(itemCount)
-      }
-
-      override def onNext(value: T): Unit = {
-        println("Thanks for the value: " + value)
-        waiting -= 1
-        storage += value
-      }
-    })
+    subscriber = Some(new BatchSubscriber[T])
 
     subscription = Some(
       observable
@@ -102,43 +86,63 @@ class BackpressuredRxInputDStream[T: ClassTag](ssc_ : StreamingContext, observab
 
   override def compute(validTime: Time): Option[RDD[T]] = {
     // Turn storage queue into an RDD
-    val rdd = if (storage.size > 0) {
-      println("Queue contains " + storage.size + " elements, lets dequeue them!")
-      val x = Some(ssc_.sparkContext.parallelize(storage.dequeueAll(_ => true)))
-      println("Now queue contains " + storage.size + " elements")
+    val rdd = if (subscriber.get.storage.size > 0) {
+      println("Queue contains " + subscriber.get.storage.size + " elements, lets dequeue them!")
+      val x = Some(ssc_.sparkContext.parallelize(subscriber.get.storage.dequeueAll(_ => true)))
       x
     } else {
       None
     }
 
-    if (waiting == 0) {
-      println("1: Not waiting")
-      if (ssc_.getScheduler().getJobSets().isEmpty) {
-        println("2: No jobs queued")
+    subscriber.get.pulse(ssc_.getScheduler().getJobSets().isEmpty)
+
+    rdd
+  }
+}
+
+/**
+ * Custom subscriber that requests more items only if
+ *
+ * @tparam T
+ */
+class BatchSubscriber[T] extends Subscriber[T] {
+  var storage: mutable.Queue[T] = new mutable.Queue[T]
+  var remaining: Int = 0
+  var itemCount: Int = 1
+  var halved: Boolean = false
+
+  override def onStart(): Unit = {
+    remaining = 1
+    request(itemCount)
+  }
+
+  override def onNext(value: T): Unit = {
+    remaining -= 1
+    storage += value
+  }
+
+  /**
+   * This method halves the number of requests under high load and doubles the
+   * the number of requests under low load.
+   *
+   * @param idle Boolean indicating the load on the system
+   */
+  def pulse(idle: Boolean): Unit = {
+    if (remaining == 0) {
+      if (idle) {
         if (halved) {
           halved = false
         } else {
           itemCount *= 2
         }
-        waiting = itemCount
-        println("3: Ask for " + itemCount + " items")
-        subscriber.get.more(itemCount)
+        remaining = itemCount
+        request(itemCount)
       } else {
-        println("4: There are jobs queued")
         if (!halved) {
           itemCount /= 2
           halved = true
         }
       }
     }
-
-    rdd
-  }
-}
-
-// Hack to allow calling `more()` outside of the anonymous class
-class MySubscriber[T] extends Subscriber[T] {
-  def more(count: Int): Unit = {
-    request(count)
   }
 }
