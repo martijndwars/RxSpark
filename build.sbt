@@ -12,4 +12,4 @@ libraryDependencies += "org.apache.spark" % "spark-core_2.10" % "1.2.1"
 
 libraryDependencies += "nl.tudelft.spark" % "spark-streaming_2.10" % "1.4.0-SNAPSHOT"
 
-
+libraryDependencies += "org.twitter4j" % "twitter4j-stream" % "4.0.3"
