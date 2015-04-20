@@ -87,9 +87,7 @@ class BackpressuredRxInputDStream[T: ClassTag](ssc_ : StreamingContext, observab
   override def compute(validTime: Time): Option[RDD[T]] = {
     // Turn storage queue into an RDD
     val rdd = if (subscriber.get.storage.size > 0) {
-      println("Queue contains " + subscriber.get.storage.size + " elements, lets dequeue them!")
-      val x = Some(ssc_.sparkContext.parallelize(subscriber.get.storage.dequeueAll(_ => true)))
-      x
+      Some(ssc_.sparkContext.parallelize(subscriber.get.storage.dequeueAll(_ => true)))
     } else {
       None
     }
