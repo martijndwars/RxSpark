@@ -1,33 +1,28 @@
+package examples
+
 import org.apache.spark.SparkConf
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 import rx.lang.scala.Observable
-import wrapper.Helper._
 import wrapper.RxUtils
+import wrapper.Helper._
 
-import scala.concurrent.duration._
-
-object Main {
-  def main(args: Array[String]): Unit = {
+object BackpressureExample {
+  def main(args: Array[String]) = {
     // Create the context with a 1 second batch size. The "local[3]" means 3 threads.
     val sparkConf = new SparkConf()
       .setMaster("local[2]")
       .setAppName("Clock")
+      .set("spark.ui.showConsoleProgress", "false")
 
     val ssc = new StreamingContext(sparkConf, Seconds(1))
 
-    // Use local observable as input stream for Spark
-    //    val nonBackpressureableClock = Observable.interval(100 milliseconds)
-    //    val stream = RxUtils.createStream(ssc, nonBackpressureableClock)
-
-    val backpressureableClock = Observable.from(0 to 1000)
-    val stream = RxUtils.createBackpressuredStream(ssc, backpressureableClock)
+    // Create an observable that supports backpressure
+    val ticker = Observable.from(0 to 10000)
+    val stream = RxUtils.createBackpressuredStream(ssc, ticker)
 
     // Simulate a slow stream so jobs will start piling up
     val slowStream = stream
-      .map(x => {
-      Thread.sleep(1000)
-      x
-    })
+      .map(x => heavyComputation(x))
 
     // Use output stream from Spark as observable
     slowStream
@@ -37,5 +32,13 @@ object Main {
 
     ssc.start()
     ssc.awaitTermination()
+  }
+
+  /**
+   * Simulate heavy computation so jobs start piling up
+   */
+  def heavyComputation(x: Int) = {
+    Thread.sleep(100)
+    x
   }
 }

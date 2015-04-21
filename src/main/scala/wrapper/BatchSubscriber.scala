@@ -1,5 +1,6 @@
 package wrapper
 
+import org.apache.spark.Logging
 import rx.lang.scala.Subscriber
 
 import scala.collection.mutable
@@ -9,7 +10,7 @@ import scala.collection.mutable
  *
  * @tparam T
  */
-class BatchSubscriber[T] extends Subscriber[T] {
+class BatchSubscriber[T] extends Subscriber[T] with Logging {
   var storage: mutable.Queue[T] = new mutable.Queue[T]
   var remaining: Int = 0
   var itemCount: Int = 1
@@ -23,6 +24,7 @@ class BatchSubscriber[T] extends Subscriber[T] {
   override def onNext(value: T): Unit = {
     remaining -= 1
     storage += value
+    logDebug("Got " + value)
   }
 
   /**
@@ -41,6 +43,7 @@ class BatchSubscriber[T] extends Subscriber[T] {
         }
         remaining = itemCount
         request(itemCount)
+        logDebug("Requested " + itemCount)
       } else {
         if (!halved) {
           itemCount /= 2
