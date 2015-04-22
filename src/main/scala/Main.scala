@@ -4,8 +4,6 @@ import rx.lang.scala.Observable
 import wrapper.Helper._
 import wrapper.RxUtils
 
-import scala.concurrent.duration._
-
 object Main {
   def main(args: Array[String]): Unit = {
     // Create the context with a 1 second batch size. The "local[3]" means 3 threads.
