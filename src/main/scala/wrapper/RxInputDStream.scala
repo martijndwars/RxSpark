@@ -25,7 +25,10 @@ class RxInputDStream[T: ClassTag](ssc_ : StreamingContext, observable: Observabl
   override def start() {
     subscription = Some(
       observable
-        .subscribe(storage += _)
+        .subscribe(
+          storage += _, // onNext
+          throw _ // onError
+        )
     )
   }
 
